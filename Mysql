@@ -1,0 +1,194 @@
+CREATE DATABASE OnlineExamDB;
+USE OnlineExamDB;
+
+CREATE TABLE Subjects (
+subject_id INT PRIMARY KEY,
+subject_nameVARCHAR(255) NOT NULL,
+subject_codeVARCHAR(20) UNIQUE NOT NULL
+);
+
+CREATE TABLE Students (
+student_id INT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    branch VARCHAR(100),
+    semester INT CHECK (semester BETWEEN 1 AND 8)
+);
+
+CREATE TABLE Questions (
+question_id INT PRIMARY KEY,
+subject_id INT,
+question_text TEXT NOT NULL,
+correct_answerVARCHAR(255) NOT NULL,
+    marks INT DEFAULT 1,
+    FOREIGN KEY (subject_id) REFERENCES Subjects(subject_id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE Exams (
+exam_id INT PRIMARY KEY,
+subject_id INT,
+exam_date DATE NOT NULL,
+duration_min INT NOT NULL,
+total_marks INT NOT NULL,
+    FOREIGN KEY (subject_id) REFERENCES Subjects(subject_id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE Exam_Registrations (
+student_id INT,
+exam_id INT,
+    PRIMARY KEY (student_id, exam_id),
+    FOREIGN KEY (student_id) REFERENCES Students(student_id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (exam_id) REFERENCES Exams(exam_id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE Attempts (
+attempt_id INT PRIMARY KEY,
+student_id INT,
+exam_id INT,
+attempt_date DATE NOT NULL,
+    status VARCHAR(50) DEFAULT 'Completed',
+    FOREIGN KEY (student_id) REFERENCES Students(student_id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (exam_id) REFERENCES Exams(exam_id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE Results (
+result_id INT PRIMARY KEY,
+attempt_id INT,
+    score DECIMAL(5,2),
+    grade VARCHAR(5),
+rank_position INT,
+    FOREIGN KEY (attempt_id) REFERENCES Attempts(attempt_id)
+        ON DELETE CASCADE
+);
+
+-- Subjects
+INSERT INTO Subjects VALUES
+(1, 'Database Management Systems', 'CSN205'),
+(2, 'Operating Systems', 'CSN203'),
+(3, 'Computer Networks', 'CSN301'),
+(4, 'Data Structures and Algorithms', 'CSN201'),
+(5, 'Artificial Intelligence', 'CSN401');
+
+-- Students
+INSERT INTO Students VALUES
+(1, 'Tabish Khan', 'tabish@dit.edu', 'CSE', 4),
+(2, 'Rahul Sharma', 'rahul@dit.edu', 'CSE', 4),
+(3, 'Aman Verma', 'aman@dit.edu', 'CSE', 4),
+(4, 'Sneha Gupta', 'sneha@dit.edu', 'CSE', 4),
+(5, 'Priya Mehta', 'priya@dit.edu', 'CSE', 4);
+
+-- Exams
+INSERT INTO Exams VALUES
+(101, 1, '2026-04-10', 90, 100),
+(102, 2, '2026-04-12', 60, 75),
+(103, 3, '2026-04-14', 90, 100),
+(104, 4, '2026-04-16', 60, 50),
+(105, 5, '2026-04-18', 120, 100);
+
+-- Exam Registrations
+INSERT INTO Exam_Registrations VALUES
+(1, 101), (2, 101), (3, 101), (4, 101), (5, 101),
+(1, 102), (2, 102), (3, 102),
+(1, 103), (4, 103), (5, 103),
+(2, 104), (3, 104), (4, 104),
+(1, 105), (2, 105), (5, 105);
+
+-- Attempts
+INSERT INTO Attempts VALUES
+(1, 1, 101, '2026-04-10', 'Completed'),
+(2, 2, 101, '2026-04-10', 'Completed'),
+(3, 3, 101, '2026-04-10', 'Completed'),
+(4, 4, 101, '2026-04-10', 'Completed'),
+(5, 5, 101, '2026-04-10', 'Completed'),
+(6, 1, 102, '2026-04-12', 'Completed'),
+(7, 2, 102, '2026-04-12', 'Completed'),
+(8, 3, 102, '2026-04-12', 'Completed'),
+(9, 1, 103, '2026-04-14', 'Completed'),
+(10, 4, 103, '2026-04-14', 'Completed');
+
+-- Results
+INSERT INTO Results VALUES
+(1, 1, 87.00, 'A', 1),
+(2, 2, 72.00, 'B', 3),
+(3, 3, 65.00, 'B', 4),
+(4, 4, 78.00, 'A', 2),
+(5, 5, 55.00, 'C', 5),
+(6, 6, 68.00, 'B', 2),
+(7, 7, 71.00, 'B', 1),
+(8, 8, 60.00, 'C', 3),
+(9, 9, 90.00, 'A', 1),
+(10, 10, 82.00, 'A', 2);
+
+
+SELECT * FROM Students;
+
+SELECT e.exam_id, s.subject_name, e.exam_date,
+e.duration_min, e.total_marks
+FROM Exams e JOIN Subjects s ON e.subject_id = s.subject_id;
+
+
+SELECT st.name, sub.subject_name, r.score, r.grade, r.rank_position
+FROM Results r
+JOIN Attempts a ON r.attempt_id = a.attempt_id
+JOIN Students st ON a.student_id = st.student_id
+JOIN Exams e ON a.exam_id = e.exam_id
+JOIN Subjects sub ON e.subject_id = sub.subject_id;
+
+SELECT sub.subject_name, AVG(r.score) AS avg_score
+FROM Results r
+JOIN Attempts a ON r.attempt_id = a.attempt_id
+JOIN Exams e ON a.exam_id = e.exam_id
+JOIN Subjects sub ON e.subject_id = sub.subject_id
+GROUP BY sub.subject_name;
+
+
+SELECT st.name, sub.subject_name, r.score
+FROM Results r
+JOIN Attempts a ON r.attempt_id = a.attempt_id
+JOIN Students st ON a.student_id = st.student_id
+JOIN Exams e ON a.exam_id = e.exam_id
+JOIN Subjects sub ON e.subject_id = sub.subject_id
+WHERE r.rank_position = 1;
+
+SELECT st.name, sub.subject_name, r.score,
+RANK() OVER (PARTITION BY e.exam_id ORDER BY r.score DESC) AS computed_rank
+FROM Results r
+JOIN Attempts a ON r.attempt_id = a.attempt_id
+JOIN Students st ON a.student_id = st.student_id
+JOIN Exams e ON a.exam_id = e.exam_id
+JOIN Subjects sub ON e.subject_id = sub.subject_id;
+
+SELECT st.name, COUNT(a.attempt_id) AS total_attempts
+FROM Students st
+LEFT JOIN Attempts a ON st.student_id = a.student_id
+GROUP BY st.name;
+
+
+CREATE VIEW Exam_Summary AS
+SELECT sub.subject_name, COUNT(a.attempt_id) AS total_attempts,
+       AVG(r.score) AS avg_score, MAX(r.score) AS highest_score
+FROM Attempts a
+JOIN Exams e ON a.exam_id = e.exam_id
+JOIN Subjects sub ON e.subject_id = sub.subject_id
+JOIN Results r ON r.attempt_id = a.attempt_id
+GROUP BY sub.subject_name;
+
+SELECT * FROM Exam_Summary;
+
+SELECT s.subject_name, COUNT(q.question_id) AS total_questions
+FROM Subjects s
+LEFT JOIN Questions q ON s.subject_id = q.subject_id
+GROUP BY s.subject_name;
+
+SELECT st.name, r.score
+FROM Results r
+JOIN Attempts a ON r.attempt_id = a.attempt_id
+JOIN Students st ON a.student_id = st.student_id
+WHERE r.score> (SELECT AVG(score) FROM Results);
+ 
