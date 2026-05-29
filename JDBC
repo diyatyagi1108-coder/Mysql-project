@@ -1,0 +1,167 @@
+import java.sql.*;
+import java.util.Scanner;
+
+public class OnlineExamSystem {
+
+    static final String URL = "jdbc:mysql://localhost:3306/OnlineExamDB";
+    static final String USER = "root";
+    static final String PASSWORD = "your_password";
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        try {
+
+            // Load MySQL Driver
+            Class.forName("com.mysql.cj.jdbc.Driver");
+
+            // Connect to Database
+            Connection con = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            System.out.println(" ONLINE EXAMINATION SYSTEM ");
+          
+
+            int choice;
+
+            do {
+
+                System.out.println("\n----- MENU -----");
+                System.out.println("1. Show All Students");
+                System.out.println("2. Show All Exams");
+                System.out.println("3. Show Results");
+                System.out.println("4. Register Student for Exam");
+                System.out.println("5. Exit");
+
+                System.out.print("Enter your choice: ");
+                choice = sc.nextInt();
+
+                switch (choice) {
+
+
+                    case 1:
+
+                        String studentQuery = "SELECT * FROM Students";
+
+                        Statement st1 = con.createStatement();
+
+                        ResultSet rs1 = st1.executeQuery(studentQuery);
+
+                        System.out.println("\n--- STUDENTS ---");
+
+                        while (rs1.next()) {
+
+                            System.out.println(
+                                rs1.getInt("student_id") + " | " +
+                                rs1.getString("name") + " | " +
+                                rs1.getString("email") + " | " +
+                                rs1.getString("branch")
+                            );
+                        }
+
+                        break;
+
+
+                    case 2:
+
+                        String examQuery =
+                        "SELECT e.exam_id, s.subject_name, e.exam_date " +
+                        "FROM Exams e " +
+                        "JOIN Subjects s ON e.subject_id = s.subject_id";
+
+                        Statement st2 = con.createStatement();
+
+                        ResultSet rs2 = st2.executeQuery(examQuery);
+
+                        System.out.println("\n--- EXAMS ---");
+
+                        while (rs2.next()) {
+
+                            System.out.println(
+                                rs2.getInt("exam_id") + " | " +
+                                rs2.getString("subject_name") + " | " +
+                                rs2.getDate("exam_date")
+                            );
+                        }
+
+                        break;
+
+
+                    case 3:
+
+                        String resultQuery =
+                        "SELECT st.name, sub.subject_name, r.score, r.grade " +
+                        "FROM Results r " +
+                        "JOIN Attempts a ON r.attempt_id = a.attempt_id " +
+                        "JOIN Students st ON a.student_id = st.student_id " +
+                        "JOIN Exams e ON a.exam_id = e.exam_id " +
+                        "JOIN Subjects sub ON e.subject_id = sub.subject_id";
+
+                        Statement st3 = con.createStatement();
+
+                        ResultSet rs3 = st3.executeQuery(resultQuery);
+
+                        System.out.println("\n--- RESULTS ---");
+
+                        while (rs3.next()) {
+
+                            System.out.println(
+                                rs3.getString("name") + " | " +
+                                rs3.getString("subject_name") + " | " +
+                                rs3.getDouble("score") + " | Grade: " +
+                                rs3.getString("grade")
+                            );
+                        }
+
+                        break;
+
+     
+
+                    case 4:
+
+                        System.out.print("Enter Student ID: ");
+                        int studentId = sc.nextInt();
+
+                        System.out.print("Enter Exam ID: ");
+                        int examId = sc.nextInt();
+
+                        String insertQuery =
+                        "INSERT INTO Exam_Registrations(student_id, exam_id) VALUES (?, ?)";
+
+                        PreparedStatement ps = con.prepareStatement(insertQuery);
+
+                        ps.setInt(1, studentId);
+                        ps.setInt(2, examId);
+
+                        int rows = ps.executeUpdate();
+
+                        if (rows > 0) {
+
+                            System.out.println("Student Registered Successfully!");
+                        }
+
+                        break;
+
+              
+
+                    case 5:
+
+                        System.out.println("Exiting System...");
+                        break;
+
+                    default:
+
+                        System.out.println("Invalid Choice!");
+                }
+
+            } while (choice != 5);
+
+        
+            con.close();
+
+        } catch (Exception e) {
+
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+}
